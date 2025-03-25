@@ -7,16 +7,22 @@ from matplotlib.widgets import Button, Slider
 from ipywidgets import IntText, link
 import ipywidgets as widgets
 
-def abc(P, a, b, c):
+def abc(P, a, b, c, G=50.):
     """Das abc-Modell
     """
-    assert(a+b<=1)
-    assert(c<=1)
+    # assert(a+b<=1)
+    # assert(c<=1)
+    # if a+b>1.:
+    #     b = 1.-a
     df = pd.DataFrame(columns=["P","Q","Qd","Qb"], 
                       index=np.arange(len(P)), dtype="float")
     df["P"] = P
-    # Fuer den Grundwassspeicher G muessen wir einen Startwert annehmen.
-    G = 5.
+
+    if a+b>1.:
+        return df
+    if c>1:
+        return df
+    
     # Ergebniscontainer fuer den Gesamtabfluss
     Q = np.repeat(0.,len(P))
     Gw = np.repeat(0.,len(P))
@@ -29,7 +35,7 @@ def abc(P, a, b, c):
     return df
     #return pd.DataFrame({"P":P, "Q":Q, "Qb":Qb, "Qd":Qd}, index=t)
 
-def plot_abc_model(P):
+def plot_abc_model_old(P):
     t = np.arange(len(P))
     apar = 0.5
     bpar = 0.2
@@ -119,10 +125,143 @@ def plot_abc_model(P):
     #button.on_clicked(reset)
     plt.show()
 
+
+def plot_abc_model(P):
+    t = np.arange(len(P))+0.5
+    apar = 0.5
+    bpar = 0.2
+    cpar = 0.1
+    sim = abc(P, apar, bpar, cpar)
+    
+    # Create the figure and the line that we will manipulate
+    fig, ax = plt.subplots(num=" ")
+    #fig.canvas.toolbar_position = 'bottom'
+    fillQ = plt.bar(t, sim.Q, color="tab:blue", alpha=0.5, width=1., label="Gesamtabfluss")
+    fillQb =plt.bar(t, sim.Qb, color="tab:blue", alpha=1., width=1., label="Basisabfluss")
+    #line, = ax.plot(t, sim.Q, lw=1, color="black")
+    ax.set_xlabel('Zeit [z.B. Monate]')
+    plt.ylabel("Abfluss (mm/Monat]")
+    plt.title("Abflusssimulation mit dem abc-Modell")
+    plt.grid()
+    plt.xlim(0,len(P))
+    plt.ylim(0,60)
+    
+    
+    def makepartext(apar,bpar,cpar):
+        return "a=%.2f\nb=%.2f\nc=%.2f\n$\psi$=%.2f\n" % (apar, bpar, cpar, apar+bpar)
+        
+    partxt = plt.text(plt.xlim()[-1]*0.97, plt.ylim()[-1]*0.97, 
+                       makepartext(apar,bpar,cpar), ha="right", va="top" )
+    
+    # Secondary axis
+    Ncolor="grey"
+    ax2=plt.twinx()
+    fillN = plt.bar(t, -sim.P, color=Ncolor, alpha=0.5, width=1., label="Niederschlag")
+    minyval = -400
+    plt.ylim(minyval,0)
+    labels = [item.get_text() for item in ax2.get_yticklabels()]
+    ticks = np.linspace(plt.ylim()[0],plt.ylim()[-1],len(labels))
+    labels = -ticks
+    labels[-1] = 0
+    labels = labels.astype("int").astype("str")
+    #ticks = ax2.get_yticks()
+    #ax2.set_yticklabels( [] )
+    ax2.set_yticks(ticks, labels=labels)
+    plt.ylabel("Niederschlag (mm/Monat)", color=Ncolor)
+    ax2.spines['bottom'].set_color(Ncolor)
+    ax2.tick_params(axis='y', colors=Ncolor)
+    
+    lns = [fillN[0]]+[fillQ[0]]+[fillQb[0]]
+    labs = ["Niederschlag","Gesamtabfluss","GW-Abfluss"]
+    ax.legend(lns, labs, loc="upper center")
+    
+    # adjust the main plot to make room for the sliders
+    fig.subplots_adjust(bottom=0.33)
+    
+    # Make a horizontal slider to control a.
+    axa = fig.add_axes([0.1, 0.2, 0.65, 0.03])
+    a_slider = Slider(
+        ax=axa,
+        label='a',
+        valmin=0.,
+        valmax=1.,
+        valinit=apar,
+    )
+    
+    # Make a horizontal slider to control b.
+    axb = fig.add_axes([0.1, 0.1, 0.65, 0.03])
+    b_slider = Slider(
+        ax=axb,
+        label='b',
+        valmin=0.,
+        valmax=1.,
+        valinit=bpar,
+    )
+    
+    # Make a horizontal slider to control b.
+    axc = fig.add_axes([0.1, 0.0, 0.65, 0.03])
+    c_slider = Slider(
+        ax=axc,
+        label='c',
+        valmin=0.,
+        valmax=1.,
+        valinit=cpar,
+    )
+    
+    # The function to be called anytime a slider's value changes
+    # def update(val):
+    #     line.set_ydata(abc(P, a_slider.val, b_slider.val, c_slider.val).Q)
+    #     fig.canvas.draw_idle()
+    
+    def update(val): 
+        sim = abc(P, a_slider.val, b_slider.val, c_slider.val)
+        #line.set_ydata(sim.Q)
+        #optional preventing autoscaling of y-axis 
+        ax.autoscale(False)
+        #create invisible dummy object to extract the vertices
+        for i, rect in enumerate(fillQ):
+            rect.set_height(sim.at[i,"Q"])
+    
+        for i, rect in enumerate(fillQb):
+            rect.set_height(sim.at[i,"Qb"])
+    
+        partxt.set_text(makepartext(a_slider.val,b_slider.val,c_slider.val))
+        if a_slider.val+b_slider.val>1:
+            partxt.set_color("red")
+        else:
+            partxt.set_color("black")
+    
+    #    dummyQ = plt.bar(t, sim.Q , alpha=0)
+    #    dpQ = dummyQ.get_paths()[0]
+    #    dummyQ.remove()
+    #    fillQ.set_paths([dpQ.vertices])
+        
+    #    dummyQb = plt.bar(t, sim.Qb , alpha=0)
+    #    dpQb = dummyQb.get_paths()[0]
+    #    dummyQb.remove()
+    #    #update the vertices of the PolyCollection
+    #    fillQb.set_paths([dpQb.vertices])
+        fig.canvas.draw_idle()
+    
+    
+    # register the update function with each slider
+    a_slider.on_changed(update)
+    b_slider.on_changed(update)
+    c_slider.on_changed(update)
+    
+    # Create a `matplotlib.widgets.Button` to reset the sliders to initial values.
+    #resetax = fig.add_axes([0.8, -0.2, 0.1, 0.04])
+    #button = Button(resetax, 'Reset', hovercolor='0.975')
+    #def reset(event):
+    #    a_slider.reset()
+    #    b_slider.reset()
+    #    c_slider.reset()
+    #button.on_clicked(reset)
+    plt.show()
+
+
+    
 # SCS-CN
-
-
-
 
 cn2table = pd.read_csv("data/cn-table.csv", index_col="Landnutzung")
 amctable = pd.read_csv("data/amc-table.csv", sep=";", index_col="cn")
@@ -160,7 +299,10 @@ def get_cn(lanu, soil, vegetation, p5):
     return CN
     
 def make_txt(P, QD):
-    t = "P = %d mm\nQ$_D$ = %d mm\n$\psi$ = %d Prozent" % (P, QD, 100*QD/P)
+    if P==0:
+        t = "P = %d mm\nQ$_D$ = %d mm\n" % (P, QD)
+    else:
+        t = "P = %d mm\nQ$_D$ = %d mm\n$\psi$ = %d Prozent" % (P, QD, 100*QD/P)
     return t
 
 
