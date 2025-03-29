@@ -126,7 +126,7 @@ def plot_abc_model_old(P):
     plt.show()
 
 
-def plot_abc_model(P):
+def plot_abc_model_old2(P):
     t = np.arange(len(P))+0.5
     apar = 0.5
     bpar = 0.2
@@ -148,7 +148,7 @@ def plot_abc_model(P):
     
     
     def makepartext(apar,bpar,cpar):
-        return "a=%.2f\nb=%.2f\nc=%.2f\n$\psi$=%.2f\n" % (apar, bpar, cpar, apar+bpar)
+        return "a=%.2f\nb=%.2f\nc=%.2f\n$\psi$=%.2f\n" % (apar, bpar, cpar, 1-apar-bpar)
         
     partxt = plt.text(plt.xlim()[-1]*0.97, plt.ylim()[-1]*0.97, 
                        makepartext(apar,bpar,cpar), ha="right", va="top" )
@@ -258,6 +258,86 @@ def plot_abc_model(P):
     #    c_slider.reset()
     #button.on_clicked(reset)
     plt.show()
+
+
+def plot_abc_model(P):
+    t = np.arange(len(P))+0.5
+    apar = 0.5
+    bpar = 0.2
+    cpar = 0.1
+    sim = abc(P, apar, bpar, cpar)
+    
+    # Create the figure and the line that we will manipulate
+    fig, ax = plt.subplots(num=" ", constrained_layout=True, figsize=(5,3))
+    #fig.canvas.toolbar_position = 'bottom'
+    fillQ = plt.bar(t, sim.Q, color="tab:blue", alpha=0.5, width=1., label="Gesamtabfluss")
+    fillQb =plt.bar(t, sim.Qb, color="tab:blue", alpha=1., width=1., label="Basisabfluss")
+    #line, = ax.plot(t, sim.Q, lw=1, color="black")
+    ax.set_xlabel('Zeit [z.B. Monate]')
+    plt.ylabel("Abfluss (mm/Monat]")
+    plt.title("Abflusssimulation mit dem abc-Modell")
+    plt.grid()
+    plt.xlim(0,len(P))
+    plt.ylim(0,60)
+    
+    
+    def makepartext(apar,bpar,cpar):
+        return "a=%.2f\nb=%.2f\nc=%.2f\n$\psi$=%.2f\n" % (apar, bpar, cpar, 1-apar-bpar)
+        
+    partxt = plt.text(plt.xlim()[-1]*0.97, plt.ylim()[-1]*0.97, 
+                       makepartext(apar,bpar,cpar), ha="right", va="top" )
+    
+    # Secondary axis
+    Ncolor="grey"
+    ax2=plt.twinx()
+    fillN = plt.bar(t, -sim.P, color=Ncolor, alpha=0.5, width=1., label="Niederschlag")
+    minyval = -400
+    plt.ylim(minyval,0)
+    labels = [item.get_text() for item in ax2.get_yticklabels()]
+    ticks = np.linspace(plt.ylim()[0],plt.ylim()[-1],len(labels))
+    labels = -ticks
+    labels[-1] = 0
+    labels = labels.astype("int").astype("str")
+    #ticks = ax2.get_yticks()
+    #ax2.set_yticklabels( [] )
+    ax2.set_yticks(ticks, labels=labels)
+    plt.ylabel("Niederschlag (mm/Monat)", color=Ncolor)
+    ax2.spines['bottom'].set_color(Ncolor)
+    ax2.tick_params(axis='y', colors=Ncolor)
+    
+    lns = [fillN[0]]+[fillQ[0]]+[fillQb[0]]
+    labs = ["Niederschlag","Gesamtabfluss","GW-Abfluss"]
+    ax.legend(lns, labs, loc="upper center")
+    
+    
+    plt.show()
+    
+    def update(a, b, c): 
+        sim = abc(P, a, b, c)
+        #line.set_ydata(sim.Q)
+        #optional preventing autoscaling of y-axis 
+        ax.autoscale(False)
+        #create invisible dummy object to extract the vertices
+        for i, rect in enumerate(fillQ):
+            rect.set_height(sim.at[i,"Q"])
+    
+        for i, rect in enumerate(fillQb):
+            rect.set_height(sim.at[i,"Qb"])
+    
+        partxt.set_text(makepartext(a,b,c))
+        if a+b>1:
+            partxt.set_color("red")
+        else:
+            partxt.set_color("black")
+        fig.canvas.draw_idle()
+    
+    aw = widgets.FloatSlider(value=0.5, min=0., max=1., step=0.05)
+    bw = widgets.FloatSlider(value=0.2, min=0., max=1., step=0.05)
+    cw = widgets.FloatSlider(value=0.1, min=0., max=1., step=0.05)
+    _ = widgets.interact(update, 
+                         a=aw,
+                         b=bw,
+                         c=cw)
 
 
     
