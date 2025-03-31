@@ -148,7 +148,7 @@ def plot_abc_model_old2(P):
     
     
     def makepartext(apar,bpar,cpar):
-        return "a=%.2f\nb=%.2f\nc=%.2f\n$\psi$=%.2f\n" % (apar, bpar, cpar, 1-apar-bpar)
+        return "a=%.2f\nb=%.2f\nc=%.2f\n1-a-b=%.2f\n" % (apar, bpar, cpar, 1-apar-bpar)
         
     partxt = plt.text(plt.xlim()[-1]*0.97, plt.ylim()[-1]*0.97, 
                        makepartext(apar,bpar,cpar), ha="right", va="top" )
@@ -282,7 +282,7 @@ def plot_abc_model(P):
     
     
     def makepartext(apar,bpar,cpar):
-        return "a=%.2f\nb=%.2f\nc=%.2f\n$\psi$=%.2f\n" % (apar, bpar, cpar, 1-apar-bpar)
+        return "a=%.2f\nb=%.2f\nc=%.2f\n1-a-b=%.2f\n" % (apar, bpar, cpar, 1-apar-bpar)
         
     partxt = plt.text(plt.xlim()[-1]*0.97, plt.ylim()[-1]*0.97, 
                        makepartext(apar,bpar,cpar), ha="right", va="top" )
