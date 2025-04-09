@@ -430,6 +430,61 @@ def plot_cn():
                          P5=[0,10,20,30,40,50,60],
                          P=(0,100,1))
 
+
+
+def dm(init,v,ci,q,k,t):
+    """Durchmischter Reaktor
+    """
+    return (init - (q*ci)/(k*v + q)) * np.exp((-(k + q/v)*t)) + (q*ci)/(k*v + q) 
+
+def plot_dm(tmax=150):
+    t = np.arange(tmax)
+    
+    # Parameter
+    c0= 10  # in g/m3 
+    Q = 1 * 3600 # von m3/s zu m3/h
+    V = 1.e+5 # in m3
+    cin= 1 # in g/m3
+    k= 0.5 / 24 # von 1/d zu 1/h
+    sim = dm(c0, V, cin, Q, k, t)
+    
+    # Create the figure and the line that we will manipulate
+    fig, ax = plt.subplots(num=" ", constrained_layout=True, figsize=(5,3))
+    #fig.canvas.toolbar_position = 'bottom'
+    pltsim, = plt.plot(t, sim, color="tab:blue", lw=2., label="Konzentration")
+    #line, = ax.plot(t, sim.Q, lw=1, color="black")
+    ax.set_xlabel('Zeit (Stunden)')
+    plt.ylabel("Konzentration (g/m³)")
+    plt.title("Stoffkonzentration im durchmischten Reaktor")
+    plt.grid()
+    plt.xlim(0,t[-1])
+    plt.ylim(0,10)
+    
+    
+    def makepartext(c0, V, cin, Q, k):
+        return "c$_0$=%.1f g/m³\nQ=%.1f m³/h\nV=%.0f m³\nc$_{in}$=%.1f g/m³\nk=%.2f 1/h\n" % (c0, Q, V, cin, k)
+        
+    partxt = plt.text(plt.xlim()[-1]*0.97, plt.ylim()[-1]*0.97, 
+                       makepartext(c0, V, cin, Q, k), ha="right", va="top",
+                     fontsize=10)
+    
+    #ax.legend()
+    
+    plt.show()
+    
+    def update(c0, V, cin, Q, k):
+        sim2 = dm(c0, V, cin, Q, k, t)
+        ax.autoscale(False)
+        pltsim.set_ydata(sim2)
+        partxt.set_text(makepartext(c0, V, cin, Q, k))
+        fig.canvas.draw_idle()
+    
+    _ = widgets.interact(update, c0=(0,15,0.1),
+                         V=(1e4,1e6,1000),
+                         cin=(0.,10., 0.05),
+                         Q=(1000,5000,100),
+                         k=(0.0,0.1,0.001),)
+
     
 # lanu_menu = Dropdown(
 #     options=cn2table.index,
